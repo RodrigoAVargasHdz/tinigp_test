@@ -14,39 +14,16 @@ import matplotlib.pyplot as plt
 
 from jax.config import config
 config.update("jax_enable_x64", True)
+config.update("jax_debug_nans", True)
 
-
-def get_params_init(key,x0):
-  params0 = {
-            "theta_c": jnp.ones(()),
-            "theta_k": jnp.ones(x0.shape[0]),
-  }
-
-  params_rnd = params0.copy()
-  for p in params0:
-    params_rnd[p] = jnp.log(random.uniform(key,jnp.array(params0[p]).shape,minval=1E-6,maxval=10.))
-    _,key = random.split(key)
-  
-  return params_rnd,key
-  return (Xtr,ytr),(Xval,yval)
+# Data
 
 def data_ch4():
-    X = jnp.load("./Data/ch4_geom.npy")
-    y = jnp.load("./Data/ch4_energy.npy")
-    # gX = jnp.load("./Data/ch4_grad.npy")
-    return X, y
+  X = jnp.load("./Data/ch4_geom.npy")
+  y = jnp.load("./Data/ch4_energy.npy")
+  # gX = jnp.load("./Data/ch4_grad.npy")
+  return X, y
   
-def build_gp(params, X):
-    params = jax.tree_map(lambda x: jnp.exp(x), params)
-
-    mean = 0. # params["mean"]
-    diag = 1E-10 # params["diag"] ** 2 
-
-    # Construct the kernel by multiplying and adding `Kernel` objects
-    kernel = params["theta_c"] * kernels.ExpSquared(params["theta_k"])
-
-    return GaussianProcess(kernel, X)
-
 def get_data_permutation(key,N):
   X,y = data_ch4()
   i0 = jnp.arange(0,y.shape[0])
@@ -59,6 +36,32 @@ def get_data_permutation(key,N):
   yval = jnp.take(y,ival)
   Xval = jnp.take(X,ival,axis=0)
   return (Xtr,ytr),(Xval,yval)
+
+
+def get_params_init(key,x0):
+  params0 = {
+            "theta_c": jnp.ones(()),
+            "theta_k": jnp.ones(x0.shape[0]),
+  }
+
+  params_rnd = params0.copy()
+  for p in params0:
+    params_rnd[p] = random.uniform(key,jnp.array(params0[p]).shape,minval=1E-1,maxval=10.) + jnp.ones_like(jnp.array(params0[p]))
+    _,key = random.split(key)
+  
+  return params_rnd,key
+  
+def build_gp(params, X):
+    params = jax.tree_map(lambda x: jnp.exp(x), params)
+
+    mean = 0. # params["mean"]
+    diag = 1E-10 # params["diag"] ** 2 
+
+    # Construct the kernel by multiplying and adding `Kernel` objects
+    kernel = params["theta_c"] * kernels.ExpSquared(params["theta_k"])
+
+    return GaussianProcess(kernel, X)
+
 
 def neg_log_likelihood(theta, X, y):
     gp = build_gp(theta, X)
