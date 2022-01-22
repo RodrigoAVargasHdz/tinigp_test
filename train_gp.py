@@ -52,7 +52,7 @@ def get_params_init(key,x0):
   return params_rnd,key
   
 def build_gp(params, X):
-    params = jax.tree_map(lambda x: jnp.exp(x), params)
+    # params = jax.tree_map(lambda x: jnp.exp(x), params)
 
     mean = 0. # params["mean"]
     diag = 1E-10 # params["diag"] ** 2 
